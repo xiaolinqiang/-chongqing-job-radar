@@ -1,0 +1,70 @@
+name: 重庆职位雷达
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '15 8 * * *'
+      timezone: 'Asia/Shanghai'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 获取项目
+        uses: actions/checkout@v6
+
+      - name: 解压职位雷达
+        run: |
+          mkdir -p app
+          unzip -q job-radar.zip -d app
+
+      - name: 安装 Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: 安装依赖
+        run: |
+          python -m pip install -r app/requirements.txt
+
+      - name: 运行测试
+        run: |
+          cd app
+          python -m pytest -q
+
+      - name: 更新重庆职位
+        env:
+          SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
+        run: |
+          python app/scripts/update_jobs.py --output app/public/data/jobs.json
+
+      - name: 配置 GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: 准备网站文件
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: app/public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: 发布职位雷达
+        id: deployment
+        uses: actions/deploy-pages@v4

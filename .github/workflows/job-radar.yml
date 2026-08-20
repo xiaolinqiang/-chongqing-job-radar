@@ -3,7 +3,7 @@ name: 重庆职位雷达
 on:
   workflow_dispatch:
   schedule:
-    - cron: '15 8 * * *'
+    - cron: '15 8 * * 1'
       timezone: 'Asia/Shanghai'
 
 permissions:
